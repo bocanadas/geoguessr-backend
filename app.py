@@ -7,6 +7,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import random
+import hmac
+import hashlib
+import base64
+from urllib.parse import urlparse, urlencode
 from dotenv import load_dotenv
 from locations import LOCATIONS
 from scoring import calculate_distance, calculate_score
@@ -27,8 +31,39 @@ CORS(app, origins=[
     # Add your GitHub Pages URL here: "https://yourusername.github.io"
 ])
 
-# Get API key from environment (not used yet, but will be for frontend)
+# Get API credentials from environment
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
+GOOGLE_MAPS_SIGNING_SECRET = os.getenv('GOOGLE_MAPS_SIGNING_SECRET')
+
+def sign_url(input_url, secret):
+    """
+    Sign a URL with a secret key using HMAC-SHA1.
+
+    Args:
+        input_url: Full URL including domain
+        secret: Base64-encoded signing secret from Google Cloud Console
+
+    Returns:
+        Signed URL with &signature= parameter appended
+    """
+    # Decode the secret from base64 (Google provides it base64-encoded)
+    decoded_secret = base64.urlsafe_b64decode(secret)
+
+    # Parse the URL to get the path and query string
+    url_obj = urlparse(input_url)
+    url_to_sign = url_obj.path + "?" + url_obj.query
+
+    # Create HMAC-SHA1 hash
+    signature = hmac.new(decoded_secret, url_to_sign.encode('utf-8'), hashlib.sha1)
+
+    # Encode the signature in base64 (URL-safe)
+    encoded_signature = base64.urlsafe_b64encode(signature.digest()).decode('utf-8')
+
+    # Remove any trailing = signs (URL-safe base64 doesn't use padding)
+    encoded_signature = encoded_signature.replace('=', '')
+
+    # Append signature to original URL
+    return f"{input_url}&signature={encoded_signature}"
 
 @app.route('/')
 def home():
@@ -37,7 +72,8 @@ def home():
         "message": "GeoGuessr Backend API",
         "endpoints": {
             "GET /random-location": "Get random coordinates with Street View coverage",
-            "POST /guess": "Submit guess and get distance/score"
+            "POST /guess": "Submit guess and get distance/score",
+            "GET /street-view-url": "Get signed Street View URL for coordinates (params: lat, lng)"
         }
     })
 
@@ -117,6 +153,72 @@ def guess():
         return jsonify({"error": "Coordinates must be numbers"}), 400
     except Exception as e:
         return jsonify({"error": "Internal server error"}), 500
+
+
+@app.route('/street-view-url', methods=['GET'])
+def street_view_url():
+    """
+    Generate a signed Google Street View Static API URL.
+
+    Query Parameters:
+        lat: Latitude (-90 to 90)
+        lng: Longitude (-180 to 180)
+
+    Response:
+        {
+            "url": "https://maps.googleapis.com/maps/api/streetview?...&signature=..."
+        }
+    """
+    try:
+        # Get query parameters
+        lat = request.args.get('lat')
+        lng = request.args.get('lng')
+
+        # Validate required fields
+        if not lat or not lng:
+            return jsonify({"error": "Missing required parameters: lat and lng"}), 400
+
+        # Convert to floats and validate
+        try:
+            lat = float(lat)
+            lng = float(lng)
+        except (ValueError, TypeError):
+            return jsonify({"error": "lat and lng must be numbers"}), 400
+
+        # Validate coordinate ranges
+        if not (-90 <= lat <= 90):
+            return jsonify({"error": "Latitude must be between -90 and 90"}), 400
+        if not (-180 <= lng <= 180):
+            return jsonify({"error": "Longitude must be between -180 and 180"}), 400
+
+        # Check if API key and signing secret are configured
+        if not GOOGLE_MAPS_API_KEY:
+            return jsonify({"error": "Server configuration error: API key not set"}), 500
+        if not GOOGLE_MAPS_SIGNING_SECRET:
+            return jsonify({"error": "Server configuration error: Signing secret not set"}), 500
+
+        # Build the unsigned URL
+        base_url = "https://maps.googleapis.com/maps/api/streetview"
+        params = {
+            "size": "800x600",
+            "location": f"{lat},{lng}",
+            "fov": "90",
+            "heading": "0",
+            "pitch": "0",
+            "key": GOOGLE_MAPS_API_KEY
+        }
+
+        # Create query string
+        query_string = urlencode(params)
+        unsigned_url = f"{base_url}?{query_string}"
+
+        # Sign the URL
+        signed_url = sign_url(unsigned_url, GOOGLE_MAPS_SIGNING_SECRET)
+
+        return jsonify({"url": signed_url})
+
+    except Exception as e:
+        return jsonify({"error": "Failed to generate signed URL"}), 500
 
 
 if __name__ == '__main__':
