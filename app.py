@@ -25,9 +25,7 @@ app = Flask(__name__)
 # Replace with your actual GitHub Pages URL when you deploy frontend
 CORS(app, origins=[
     "http://localhost:3000",      # Local frontend testing
-    "http://localhost:5500",      # Live Server (VS Code)
-    "http://127.0.0.1:3000",      # Alternative local
-    "http://127.0.0.1:5500",      # Alternative local
+    "http://127.0.0.1:5501",      # Live Server (VS Code)
     # Add your GitHub Pages URL here: "https://yourusername.github.io"
 ])
 
