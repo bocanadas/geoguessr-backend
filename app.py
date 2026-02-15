@@ -26,7 +26,7 @@ app = Flask(__name__)
 CORS(app, origins=[
     "http://localhost:3000",      # Local frontend testing
     "http://127.0.0.1:5501",      # Live Server (VS Code)
-    # Add your GitHub Pages URL here: "https://yourusername.github.io"
+    "https://bocanadas.github.io"
 ])
 
 # Get API credentials from environment
