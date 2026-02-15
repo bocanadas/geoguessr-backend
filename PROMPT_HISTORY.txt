@@ -1,0 +1,35 @@
+PROMPT HISTORY
+===============
+
+Tool: Claude Code (Sonnet 4.5)
+Project: GeoGuessr Backend API
+
+Prompts:
+
+1. Initial request to build GeoGuessr clone backend for class assignment - first time using
+   Flask, environment variables, and deploying a backend. Wanted to learn step-by-step.
+
+2. "why do we need a virtual enviornment is this better? i dont mind installing flask."
+
+3. "i have my render.com web serive URL now: https://geoguessr-backend-inwf.onrender.com i
+   deployed it now what? what do i need to change in this project? i havent made my github
+   page URL because i have another repo for the front end"
+
+4. "i get this how does this prove anything i still dont understand how this works? how does
+   this interact with a front end? im still confused how the pieces stick together can you
+   explain it intuitively and concisely. my current understanding is that when you click on certain buttons on the front end then that click wakes up one of these app routes but im not sure how that code would look like. i'm still trying to wrap my head around this without getting confused"
+
+5. "I need to add a new endpoint to my existing GeoGuessr Flask backend to support signed Google Street View URLs. This is for a class assignment that requires all API keys to stay on the backend (Render) and never be exposed in the frontend."
+
+6. "im confused why do we need to futher ecrypt this current secret are you sure no one will
+   be able to use my account usage?"
+
+7. "im getting this error:
+   sebastianguevara@Sebastians-MacBook-Air-4 geoguessr-backend % curl
+   "https://geoguessr-backend-inwf.onrender.com/street-view-url?lat=48.8584&lng=2.2945"
+   {"error":"Server configuration error: Signing secret not set"}"
+
+Implementation notes:
+- Built Flask backend with 4 endpoints (/, /random-location, /guess, /street-view-url)
+- Deployed to Render.com with environment variable management
+- Configured CORS for GitHub Pages frontend integration
